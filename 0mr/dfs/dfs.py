@@ -5,7 +5,7 @@ import pylab as plt
 print('Depth first search')
 
 start = (3, 3) # tuple
-goal = (3, 5)
+goal = (13, 5)
 
 ## variables
 state_space = np.random.rand(20, 20) * 0.0
@@ -25,6 +25,7 @@ def depth_first_search(state, goal, depth, state_space, visited):
 
     # Pokud jsme v cili, vyhra
     if state == goal:
+        print("YUPI!")
         return True
 
     ## Kontrola, jestli hloubka neni rovna 0
@@ -36,7 +37,6 @@ def depth_first_search(state, goal, depth, state_space, visited):
     # print(depth)
     
     actions = [(0, 1), (-1, 0), (0, -1), (1, 0)] # list
-
     for row, col in actions:
         new_state = state[0] + row, state[1] + col
         print(new_state, depth)
