@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 SS_SIZE = 20 # size of state_space
-state_space = np.random.rand(SS_SIZE, SS_SIZE)*0.0
+state_space = np.zeros((SS_SIZE, SS_SIZE), dtype=float)
 start = (0, 6) # start 
 goal = (10, 17) # finish
 
@@ -15,6 +15,9 @@ moves = ((0, -1), (-1, 0), (1, 0), (0, 1)) # define move actions
 current_state = start # define start point as current state
 
 visited = [] # init list of visited points
+ 
+plt.imshow(state_space)
+plt.show()
 
 pre_checking = 0
 
@@ -60,7 +63,6 @@ while (find_solution == False):
             # check if we were not be here before
             if new_state not in visited:
                 visited.append(new_state) 
-                state_space[new_state] = 4.0 
             else:
                 branch_end = True
                 continue
@@ -69,16 +71,20 @@ while (find_solution == False):
             current_state = new_state
             print(current_state)
  
+
+radky, sloupce = zip(*visited) 
+color = 0.75
+
 # cycle for step-by-step drawing the path
 for i in visited:
+    color += 1/len(visited)
+    state_space[i] = color + 1/len(visited)
 
-    color_begin += (1/len(visited))
-    state_space[i] = color_begin
-
-state_space[start] = 2 
-state_space[goal] = 3
+state_space[start] = 1
+state_space[goal] = 2
 
 # print total steps
 print("Total steps is", len(visited))
-plt.imshow(state_space)
+plt.imshow(state_space, vmin = 0, vmax = 2)
+plt.colorbar()
 plt.show()
