@@ -11,7 +11,7 @@ SS_SIZE = 30 # size of state_space
 # without obstacles just use zeros()
 state_space = np.zeros((SS_SIZE, SS_SIZE), dtype=float)
 start = (0, 6) # start 
-goal = (32, 27) # finish
+goal = (28, 17) # finish
 
 moves = ((0, 1), (1, 0), (-1, 0), (0, -1)) # define move actions
 
@@ -36,7 +36,7 @@ find_solution = False
 parent_map = {}
 
 while (find_solution == False): 
-
+    
     current_state = visited[visited_index]
     visited_index += 1
 
