@@ -1,9 +1,11 @@
-# ! 19.04.2026 8:17
-# TODO: Divide each section in code for better readability. Example: Read data, prepocess data etc.
+# ! 19.04.2026 9:55
+# TODO: Try to achieve even distribution between emotions. UPDATE COLUMN VALUES! WRITE COMMENTS TO replace sectio
 
-# * Found out, that "rough" preprocessing dataset is not correct attitude to this task \
-# * My first idea of improvment is not to drop every row with multi emotional text, \
-# * But check, weather one of its category relates to one of my emotion scope.
+# * After "smarter" preprocessing i achieve "evener" distribution between   \
+# * anger, joy and sadness. However amount of fear texts are still in lack. \
+# * Try to consolte current goals with teachers. I want to fill fear texts  \
+# * with sinthetic datas with combination of natural texts. And right after \
+# * i will try to set TensorFlow env.  
 
 import copy
 import numpy as np
@@ -28,13 +30,26 @@ my_nn_emotions = (2, 14, 15, 17, 25)                        # Init tupple with e
 
 not_my_nn_emotions = []                                     # Init empty list of indexes of text, that is out of my emotions scope
 
+counter = 0
+
 for index in range(rows):                                   #TODO: Try to implement enumerate() fashion loop here
 
-    if len(df[df.columns[1]].loc[df.index[index]]) >= 3:    # Detect multi emotion text with the easiest way.  \
-                                                            # Dataaset has only 28 emotion classes, each class \
-                                                            # with 1 emotion has a number with maximum len = 2 \ 
+    stop = False
 
-        multivalue_index_list.append(index)                 # Add current index to the list.
+    if len(df[df.columns[1]].loc[df.index[index]]) >= 3:
+
+            tmp = df[df.columns[1]].loc[df.index[index]]
+
+            for multy in tmp.split(','):
+                 
+                 if int(multy) in my_nn_emotions:
+                      stop = True
+                      df.replace(df[df.columns[1]].loc[df.index[index]], multy, inplace = True)
+                      break
+            if stop == True:
+                continue
+
+            multivalue_index_list.append(index)                 # Add current index to the list.
         
         # print(df_cleared[df_cleared.columns[0]].loc[df_cleared.index[index]]) #Left it here because of .loc method
 
@@ -78,12 +93,12 @@ df_cleared['index'] = df_cleared['index'].cat.rename_categories({           # Re
 
 emotions_frequency = df_cleared['index'].value_counts()                     # Count frequency of each emotion text in preprocessed dataset
 
-print(emotions_frequency)                                   # Print frequency of emotions
-                                                            # * Gratitude: 1857
-                                                            # * Anger:     1025
-                                                            # * Joy:        853
-                                                            # * Sadness:    817
-                                                            # * Fear:       430
+print(emotions_frequency)                                   # Print frequency of emotions. -> after "smarter" preprocessing
+                                                            # * Gratitude: 1857 -> 2649
+                                                            # * Anger:     1025 -> 1567
+                                                            # * Joy:        853 -> 1370
+                                                            # * Sadness:    817 -> 1265
+                                                            # * Fear:       430 ->  591
 
 emotions_frequency.plot(kind='bar')                         # Plot the bar graf
 plt.title('Emotions frequency in preprocessed dataset')
@@ -92,5 +107,6 @@ plt.ylabel('Frequency')
 plt.grid(True)                                                                            
 plt.show()
 
+print(emotions_frequency)   
 
 
