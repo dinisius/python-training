@@ -14,7 +14,7 @@ from tensorflow.keras.layers import TextVectorization
                                                     ###################
                                                     # * READ DATASETS #
                                                     ###################
-NUMBER_OF_LAYERS = 5                                                                    
+NUMBER_OF_LABELS = 5                                                                    
 
 # Load the datasets
 emotions_train = pd.read_csv("preprocessing/data_cleared_train.tsv", sep="\t")
@@ -62,7 +62,6 @@ print("Emotional label in human format", emotions_lables[0])
 print("Emotional text in 'int' vectorized format", \
        int_vectorize_layer(emotions_features[emotions_features.columns[0]].loc[emotions_features.index[0]]).numpy())    # ? Looks like .numpy() is \
                                                                                                                         # ? mandatory in this case 
-
                                                     ########################
                                                     # * SET NEURAL NETWORK #
                                                     ########################
@@ -90,7 +89,7 @@ def create_model(vocab_size, num_labels, vectorizer=None):
     return model
 
 # 'vocab_size' is 'VOCAB_SIZE + 1' since '0' is used additionally for padding.
-int_model = create_model(vocab_size=VOCAB_SIZE + 1, num_labels=NUMBER_OF_LAYERS, vectorizer=int_vectorize_layer)
+int_model = create_model(vocab_size=VOCAB_SIZE + 1, num_labels=NUMBER_OF_LABELS, vectorizer=int_vectorize_layer)
 
 int_model.compile(
     loss=losses.SparseCategoricalCrossentropy(from_logits=True),                            # TODO: Find out, what is logit
@@ -101,17 +100,16 @@ int_model.compile(
                                                     # * LEARNING PROCESS #
                                                     ######################
 
-# 1. Vytvoření "hlídače", který zastaví trénink
-early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
+# * EarlyStopping monitor
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True) 
 
-# 2. Tvůj upravený příkaz fit (přidal jsem parametr "callbacks" nakonec)
 int_history = int_model.fit(
     emotions_features[emotions_features.columns[0]].to_numpy(), 
     emotions_lables, 
     batch_size=batch_size, 
     epochs=50, # Teď můžeš s klidem nastavit hodně epoch
     validation_data=(test_features[test_features.columns[0]].to_numpy(), test_lables), 
-    callbacks=[early_stop]
+    callbacks=[early_stop]                                                                  # * Should be list
 )
 
                                                     ######################
@@ -122,27 +120,22 @@ int_history = int_model.fit(
 # (Nezapomněli jsme na náš .to_numpy() trik)
 raw_predictions = int_model.predict(test_features[test_features.columns[0]].to_numpy())
 
-# 2. Model vrací tzv. logits (syrová čísla pro každou z 5 emocí). 
-# Potřebujeme vybrat tu emoci, která dostala nejvyšší skóre.
-predicted_labels = np.argmax(raw_predictions, axis=1)
+# * Find maxarg indice in each row
+predicted_labels = np.argmax(raw_predictions, axis=1)                                       
 
-# 3. Spočítáme matici záměn (porovnáme skutečnost s tipy modelu)
+# Generatee confusion matrix
 cm = confusion_matrix(test_lables, predicted_labels)
 
-# 4. Vykreslení matice
-# Tady si pak můžeš do display_labels dopsat reálné názvy svých emocí ve správném pořadí (0-4)
-emotions_names = ['Emoce 0', 'Emoce 1', 'Emoce 2', 'Emoce 3', 'Emoce 4'] 
+emotions_names = ['Anger', 'Fear', 'Gratitude', 'Joy', 'Sadness'] 
 
+# Gemini support
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=emotions_names)
 disp.plot(cmap=plt.cm.Blues)
 
-# Zvětšíme obrázek, ať je to hezky čitelné
 fig = plt.gcf()
 fig.set_size_inches(8, 8)
-plt.title("Matice záměn (Confusion Matrix)")
+plt.title("Emotion texts Confusion Matrix)")
 plt.show()
 
-
-# accuracy: 0.9113 - loss: 0.3019 - val_accuracy: 0.8687 - val_loss: 0.3816
-
-# int_history = int_model.fit(emotions_features[emotions_features.columns[0]].to_numpy(), emotions_lables, batch_size=batch_size, epochs=10, validation_data=(test_features[test_features.columns[0]].to_numpy(), test_lables))
+# EarlyStopping(patience = 2) => accuracy: 0.9113 - loss: 0.3019 - val_accuracy: 0.8687 - val_loss: 0.3816
+# EarlyStopping(patience = 2) => accuracy: 0.9324 - loss: 0.2291 - val_accuracy: 0.8568 - val_loss: 0.4131
