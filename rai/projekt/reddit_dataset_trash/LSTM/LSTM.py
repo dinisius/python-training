@@ -12,33 +12,21 @@ from tensorflow.keras.layers import TextVectorization
                                                     ###################
                                                     # * READ DATASETS #
                                                     ###################
-NUMBER_OF_LABELS = 4                                                                    
+NUMBER_OF_LABELS = 5                                                                    
 
 # Load the datasets
-emotions_train = pd.read_csv("preprocessing/EmotionsInText/data_cleared_train.tsv", sep="\t")
-emotions_test = pd.read_csv("preprocessing/EmotionsInText/data_test.tsv", sep="\t") 
-emotions_valid = pd.read_csv("preprocessing/EmotionsInText/data_valid.tsv", sep="\t")            
+emotions_train = pd.read_csv("preprocessing/data_cleared_train.tsv", sep="\t")
+emotions_test = pd.read_csv("preprocessing/data_cleared_test.tsv", sep="\t")            
 
 # Preprocess datasets
 emotions_features = emotions_train.copy()                                               # Copy train dataset to and then pop index column
-emotions_lables = emotions_features.pop('Emotion')                                        # That's how i obtain features and labels
+emotions_lables = emotions_features.pop('index')                                        # That's how i obtain features and labels
 emotions_features = emotions_features.drop(columns='Unnamed: 0')                        # Drop unusable first column
 
 
 test_features = emotions_test.copy()                                                    # Copy test dataset to and then pop index column
-test_lables = test_features.pop('Emotion')                                                # Drop unusable first column
-test_features = test_features.drop(columns='Unnamed: 0')                        # Drop unusable first column
-
-valid_features = emotions_valid.copy()                                                    # Copy test dataset to and then pop index column
-valid_lables = valid_features.pop('Emotion')                                                # Drop unusable first column
-valid_features = valid_features.drop(columns='Unnamed: 0')                        # Drop unusable first column
-
-print(test_features.head())
-print(test_lables.head())
-print(valid_features.head())
-print(valid_lables.head())
-print(emotions_features.head())
-print(emotions_lables.head())
+test_features = test_features.drop(columns='Unnamed: 0')                                # That's how i obtain features and labels
+test_lables = test_features.pop('index')                                                # Drop unusable first column
 
                                                     #######################
                                                     # * CREATE VOCABILARY #
@@ -46,6 +34,7 @@ print(emotions_lables.head())
 
 # * Almost every step was copied from Tensor Flows "Load text" article: https://www.tensorflow.org/tutorials/load_data/text
 
+# TODO: Change following 3 variables and follow their influence on the nn
 batch_size = 32                                                                         
 VOCAB_SIZE = 10000                                                                      # Set maximum size of vocaulary (of unique words)
 MAX_SEQUENCE_LENGTH = 50                                                                # This parameter sets strict length of input tockens                  
@@ -75,11 +64,7 @@ print("Emotional text in 'int' vectorized format", \
                                                     # * SET NEURAL NETWORK #
                                                     ########################
 
-# * 1D Convolutional case (no freaking way, see the name of this source file)
-
-# TODO Useful articles:
-                        # * layers.Embedding: https://www.tensorflow.org/api_docs/python/tf/keras/layers/Embedding
-                        # * Conv1D: https://www.tensorflow.org/api_docs/python/tf/keras/layers/Conv1D
+# * LSTM case (no freaking way, see the name of this source file)
 
 def create_model(vocab_size, num_labels, vectorizer=None):
     my_layers =[]
@@ -87,11 +72,9 @@ def create_model(vocab_size, num_labels, vectorizer=None):
         my_layers = [vectorizer]
 
     my_layers.extend([
-        layers.Embedding(vocab_size, output_dim=16, mask_zero=True),                              
-        layers.Dropout(0.5),                                                                        
-        # padding = filling with null empty words
-        layers.Conv1D(filters=64, kernel_size=5, strides=1, padding="valid", activation="relu"),    
-        layers.GlobalMaxPooling1D(),                                                       
+        layers.Embedding(vocab_size, output_dim=16, mask_zero=True),                       # TODO: Play with output_dim=16 parameter to compare results                                                                                      # TODO: Play with Dropout parameter
+        layers.Bidirectional(layers.LSTM(64, return_sequences=True, dropout=0.4)),    # TODO: Play with all the parameters (PAT strides)
+        layers.GlobalMaxPooling1D(),                                                        # TODO: return to this method for better understanding
         layers.Dense(num_labels)                                                            # Just my regular densely-connected NN layer.
     ])
 
@@ -111,14 +94,14 @@ int_model.compile(
                                                     ######################
 
 # * EarlyStopping monitor
-early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True) 
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True) 
 
 int_history = int_model.fit(
     emotions_features[emotions_features.columns[0]].to_numpy(), 
     emotions_lables, 
     batch_size=batch_size, 
-    epochs=50,
-    validation_data=(valid_features[valid_features.columns[0]].to_numpy(), valid_lables), 
+    epochs=20,
+    validation_data=(test_features[test_features.columns[0]].to_numpy(), test_lables), 
     callbacks=[early_stop]                                                                  # * Should be list
 )
 
@@ -134,7 +117,7 @@ predicted_labels = np.argmax(raw_predictions, axis=1)
 # Generatee confusion matrix
 cm = confusion_matrix(test_lables, predicted_labels)
 
-emotions_names = ['Anger', 'Fear', 'Happy', 'Sadness'] 
+emotions_names = ['Anger', 'Fear', 'Gratitude', 'Joy', 'Sadness'] 
 
 # Gemini support
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=emotions_names)
@@ -142,7 +125,8 @@ disp.plot(cmap=plt.cm.Blues)
 
 fig = plt.gcf()
 fig.set_size_inches(8, 8)
-plt.title("Emotion texts (Confusion Matrix)")
+plt.title("Emotion texts Confusion Matrix)")
 plt.show()
 
-# int_model.export("1d_conv")
+
+# First shot: accuracy: 0.9679 - loss: 0.1185 - val_accuracy: 0.8127 - val_loss: 0.6013
